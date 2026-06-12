@@ -18,6 +18,12 @@ func enumerate(vendorID uint16, productIDs []uint16) ([]Info, error) {
 	const base = "/sys/class/hidraw"
 	entries, err := os.ReadDir(base)
 	if err != nil {
+		// No hidraw subsystem (e.g. no HID devices present, or a kernel
+		// without CONFIG_HIDRAW) means simply "no devices found", not a fatal
+		// error.
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
 		return nil, fmt.Errorf("reading %s: %w", base, err)
 	}
 
