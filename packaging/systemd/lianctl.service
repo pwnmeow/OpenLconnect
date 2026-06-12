@@ -1,0 +1,18 @@
+[Unit]
+Description=lianctl - Lian Li UNI FAN fan-curve & RGB daemon
+After=multi-user.target
+
+[Service]
+Type=simple
+Environment=LIANCTL_CONFIG=/etc/lianctl/config.json
+ExecStart=/usr/local/bin/lianctl daemon
+Restart=on-failure
+RestartSec=3
+# Hardening (relax if your temp sources need more access).
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=/etc/lianctl
+ProtectHome=true
+
+[Install]
+WantedBy=multi-user.target

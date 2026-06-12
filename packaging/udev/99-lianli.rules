@@ -1,0 +1,7 @@
+# Lian Li UNI FAN controllers — allow non-root access to the hidraw node.
+# Install: sudo cp 99-lianli.rules /etc/udev/rules.d/ && sudo udevadm control --reload && sudo udevadm trigger
+#
+# TAG+="uaccess" grants the logged-in user access on systemd-logind systems.
+# The plugdev group line is a fallback for systems without uaccess.
+SUBSYSTEM=="hidraw", ATTRS{idVendor}=="0cf2", MODE="0660", TAG+="uaccess", GROUP="plugdev"
+KERNEL=="hidraw*", ATTRS{idVendor}=="0cf2", MODE="0660", TAG+="uaccess", GROUP="plugdev"
