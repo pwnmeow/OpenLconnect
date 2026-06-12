@@ -1,0 +1,7 @@
+# This is a Linux-targeted project; keep LF endings so shell scripts and
+# udev/systemd files work when checked out on Linux.
+* text=auto eol=lf
+*.go text eol=lf
+*.sh text eol=lf
+*.rules text eol=lf
+*.service text eol=lf
