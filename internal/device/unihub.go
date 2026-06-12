@@ -3,7 +3,7 @@ package device
 import (
 	"fmt"
 
-	"github.com/lianctl/lianctl/internal/hid"
+	"github.com/pwnmeow/OpenLconnect/internal/hid"
 )
 
 // Report ID prefixing every Lian Li UNI Hub command.

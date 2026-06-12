@@ -4,7 +4,7 @@ package device
 import (
 	"fmt"
 
-	"github.com/lianctl/lianctl/internal/hid"
+	"github.com/pwnmeow/OpenLconnect/internal/hid"
 )
 
 // VendorID is Lian Li's USB vendor ID.

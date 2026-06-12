@@ -1,0 +1,33 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+      - name: Build release binaries
+        run: |
+          mkdir -p dist
+          for arch in amd64 arm64; do
+            GOOS=linux GOARCH=$arch go build -trimpath -ldflags "-s -w" \
+              -o "lianctl" ./cmd/lianctl
+            tar -czf "dist/lianctl-${GITHUB_REF_NAME}-linux-${arch}.tar.gz" \
+              lianctl README.md LICENSE packaging scripts
+            rm -f lianctl
+          done
+          (cd dist && sha256sum *.tar.gz > SHA256SUMS.txt)
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          generate_release_notes: true

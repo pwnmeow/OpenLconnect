@@ -11,10 +11,10 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/lianctl/lianctl/internal/config"
-	"github.com/lianctl/lianctl/internal/daemon"
-	"github.com/lianctl/lianctl/internal/device"
-	"github.com/lianctl/lianctl/internal/sensors"
+	"github.com/pwnmeow/OpenLconnect/internal/config"
+	"github.com/pwnmeow/OpenLconnect/internal/daemon"
+	"github.com/pwnmeow/OpenLconnect/internal/device"
+	"github.com/pwnmeow/OpenLconnect/internal/sensors"
 )
 
 const usage = `lianctl - open-source Linux control for Lian Li UNI FAN controllers

@@ -1,3 +1,3 @@
-module github.com/lianctl/lianctl
+module github.com/pwnmeow/OpenLconnect
 
 go 1.25

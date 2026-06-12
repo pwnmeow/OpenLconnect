@@ -3,7 +3,7 @@ package device
 import (
 	"testing"
 
-	"github.com/lianctl/lianctl/internal/hid"
+	"github.com/pwnmeow/OpenLconnect/internal/hid"
 )
 
 // fakeDevice records every write so we can assert on the wire bytes.

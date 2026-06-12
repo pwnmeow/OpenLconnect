@@ -1,18 +1,21 @@
-# lianctl
+# OpenLConnect
 
 **An open-source Linux replacement for Lian Li L-Connect 3.** Control UNI FAN
 controller **fan speeds** (manual % and temperature curves) and **ARGB**
 (per-LED colors + hardware effects) directly over USB HID — no vendor software,
-no cloud, no GUI required.
+no cloud, no GUI required. The command-line tool is `lianctl`.
 
 Pure Go, **zero external dependencies**, no cgo, no libusb. Talks straight to
 `/dev/hidraw*`.
 
 > Status: fan control works on **all** UNI FAN controllers. Full per-LED RGB is
-> implemented and tested for the **UNI FAN SL-Infinity** (`0cf2:a102`). RGB for
-> other models and LCD streaming are framework-ready — see
-> [`docs/PROTOCOL.md`](docs/PROTOCOL.md) and [`docs/CAPTURE.md`](docs/CAPTURE.md)
+> implemented and **verified on real hardware** for the **UNI FAN SL-Infinity**
+> (`0cf2:a102`). RGB for other models and LCD streaming are framework-ready —
+> see [`docs/PROTOCOL.md`](docs/PROTOCOL.md) and [`docs/CAPTURE.md`](docs/CAPTURE.md)
 > to help decode them.
+>
+> _Not affiliated with or endorsed by Lian Li. "L-Connect" is used only to
+> describe compatibility._
 
 ## Supported hardware
 
@@ -29,8 +32,8 @@ Pure Go, **zero external dependencies**, no cgo, no libusb. Talks straight to
 Requires Go 1.25+ on the Linux machine (or cross-compile — see below).
 
 ```bash
-git clone https://github.com/lianctl/lianctl
-cd lianctl
+git clone https://github.com/pwnmeow/OpenLconnect
+cd OpenLconnect
 ./scripts/install.sh            # builds, installs binary + udev rule
 # optional: also install & enable the fan-curve daemon
 ./scripts/install.sh --service
