@@ -4,7 +4,13 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
+if ! command -v go >/dev/null 2>&1; then
+  echo "error: Go is not installed or not on PATH (need Go 1.25+). See https://go.dev/dl/" >&2
+  exit 1
+fi
+
 echo "==> building"
+mkdir -p build
 go build -o build/lianctl ./cmd/lianctl
 
 echo "==> installing binary to /usr/local/bin (sudo)"
