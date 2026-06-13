@@ -29,15 +29,20 @@ Pure Go, **zero external dependencies**, no cgo, no libusb. Talks straight to
 
 ## Install
 
-Requires Go 1.25+ on the Linux machine (or cross-compile — see below).
+No toolchain required — the installer downloads a prebuilt binary for your
+machine (`curl` or `wget` is enough). Go is only needed if you want to build
+from source.
 
 ```bash
 git clone https://github.com/pwnmeow/OpenLconnect
 cd OpenLconnect
-./scripts/install.sh            # builds, installs binary + udev rule
+./scripts/install.sh            # downloads binary, installs it + udev rule
 # optional: also install & enable the fan-curve daemon
 ./scripts/install.sh --service
 ```
+
+Prefer to build from the checkout instead of downloading? Install Go 1.25+ and
+run `BUILD_FROM_SOURCE=1 ./scripts/install.sh`.
 
 Re-login or replug the controller once so the udev rule grants access. Then:
 
