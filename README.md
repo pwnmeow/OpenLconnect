@@ -66,9 +66,13 @@ lianctl sensors                   # available temperature sources
 # Fans (channels 0-3)
 lianctl fan 0 60                  # set channel 0 to 60%
 lianctl fan 1 pwm                 # hand channel 1 to motherboard 4-pin PWM
+lianctl speed high                # all fans to a preset (low|medium|high|full)
 
 # RGB (SL-Infinity, channels 0-7)
-lianctl color 0 '#5a00ff' 100     # solid purple, 100% brightness
+lianctl rgb off                   # all lights off (every channel)
+lianctl rgb on                    # all lights on (white, full brightness)
+lianctl rgb on '#5a00ff' 80       # all lights on, purple at 80%
+lianctl color 0 '#5a00ff' 100     # solid purple on one channel, 100% brightness
 lianctl effect 0 rainbow speed=80 # hardware rainbow
 lianctl effect 0 breathing color='#00ff88' bri=50
 lianctl effects                   # list effect names

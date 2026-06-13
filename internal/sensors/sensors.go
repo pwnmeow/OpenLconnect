@@ -101,6 +101,42 @@ func readMax() (float64, error) {
 	return max, nil
 }
 
+// Reading is one resolved hwmon temperature source.
+type Reading struct {
+	Chip    string
+	Label   string
+	Celsius float64
+}
+
+// Name renders the source as a config-style string, e.g. "hwmon:k10temp/Tctl".
+func (r Reading) Name() string {
+	if r.Label == "" {
+		return "hwmon:" + r.Chip
+	}
+	return "hwmon:" + r.Chip + "/" + r.Label
+}
+
+// ReadAll returns every readable hwmon temperature on the system.
+func ReadAll() []Reading {
+	var out []Reading
+	dirs, _ := filepath.Glob("/sys/class/hwmon/hwmon*")
+	for _, d := range dirs {
+		name, _ := os.ReadFile(filepath.Join(d, "name"))
+		chip := strings.TrimSpace(string(name))
+		inputs, _ := filepath.Glob(filepath.Join(d, "temp*_input"))
+		for _, in := range inputs {
+			label := strings.TrimSuffix(in, "_input") + "_label"
+			lb, _ := os.ReadFile(label)
+			v, err := readSysfsTemp(in)
+			if err != nil {
+				continue
+			}
+			out = append(out, Reading{Chip: chip, Label: strings.TrimSpace(string(lb)), Celsius: v})
+		}
+	}
+	return out
+}
+
 // ListHwmon returns a human-readable inventory of available hwmon temperatures,
 // for `lianctl sensors`.
 func ListHwmon() []string {

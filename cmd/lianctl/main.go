@@ -4,6 +4,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/signal"
@@ -22,9 +23,13 @@ const usage = `lianctl - open-source Linux control for Lian Li UNI FAN controlle
 USAGE:
   lianctl list                          list detected controllers
   lianctl sensors                       list available temperature sources
+  lianctl temp                          show temperatures, color-coded by heat
   lianctl fan <ch> <percent>            set a fan channel to a manual duty (0-100)
   lianctl fan <ch> pwm                  hand a fan channel to motherboard PWM
+  lianctl speed <low|medium|high|full>  set all fan channels to a preset duty
   lianctl color <ch> <#RRGGBB> [bri]    solid color on an RGB channel (bri 0-100)
+  lianctl rgb off                       turn off all RGB on every channel
+  lianctl rgb on [#RRGGBB] [bri]        turn all RGB on (default white, 100%)
   lianctl effect <ch> <name> [opts]     run a hardware effect (see 'effects')
   lianctl effects                       list effect names
   lianctl sync <on|off>                 toggle motherboard ARGB-header sync
@@ -57,13 +62,19 @@ func run(args []string) error {
 			fmt.Println(s)
 		}
 		return nil
+	case "temp":
+		return cmdTemp()
 	case "effects":
 		fmt.Println(strings.Join(device.EffectModeNames(), "\n"))
 		return nil
 	case "fan":
 		return cmdFan(args[1:])
+	case "speed":
+		return cmdSpeed(args[1:])
 	case "color":
 		return cmdColor(args[1:])
+	case "rgb":
+		return cmdRGB(args[1:])
 	case "effect":
 		return cmdEffect(args[1:])
 	case "sync":
@@ -131,6 +142,90 @@ func cmdFan(args []string) error {
 	})
 }
 
+// tempStatus classifies a temperature into a status word and an ANSI color.
+func tempStatus(c float64) (status, color string) {
+	switch {
+	case c >= 85:
+		return "TOO HOT", "\033[1;31m" // bold red
+	case c >= 70:
+		return "HOT", "\033[31m" // red
+	case c >= 55:
+		return "WARM", "\033[33m" // yellow
+	default:
+		return "OK", "\033[32m" // green
+	}
+}
+
+// cmdTemp prints every hwmon temperature with a color-coded heat status.
+func cmdTemp() error {
+	readings := sensors.ReadAll()
+	if len(readings) == 0 {
+		return fmt.Errorf("no hwmon temperatures found")
+	}
+	color := isTerminal(os.Stdout)
+	hottest := -300.0
+	for _, r := range readings {
+		printTemp(r.Name(), r.Celsius, color)
+		if r.Celsius > hottest {
+			hottest = r.Celsius
+		}
+	}
+	fmt.Println()
+	printTemp("hottest", hottest, color)
+	return nil
+}
+
+func printTemp(name string, c float64, color bool) {
+	status, col := tempStatus(c)
+	if color {
+		fmt.Printf("%-28s %6.1f°C  %s%s\033[0m\n", name, c, col, status)
+	} else {
+		fmt.Printf("%-28s %6.1f°C  %s\n", name, c, status)
+	}
+}
+
+// isTerminal reports whether f is attached to a terminal (so we only emit ANSI
+// color when a human is watching, not when piped to a file).
+func isTerminal(f *os.File) bool {
+	fi, err := f.Stat()
+	if err != nil {
+		return false
+	}
+	return fi.Mode()&os.ModeCharDevice != 0
+}
+
+// speedPresets maps friendly names to fan duty percentages.
+var speedPresets = map[string]float64{
+	"low":    30,
+	"medium": 50,
+	"high":   75,
+	"full":   100,
+}
+
+// cmdSpeed sets every fan channel on every controller to a named preset duty.
+func cmdSpeed(args []string) error {
+	if len(args) != 1 {
+		return fmt.Errorf("usage: lianctl speed <low|medium|high|full>")
+	}
+	pct, ok := speedPresets[strings.ToLower(args[0])]
+	if !ok {
+		return fmt.Errorf("unknown speed %q (try: low, medium, high, full)", args[0])
+	}
+	ctrls, err := openAll()
+	if err != nil {
+		return err
+	}
+	defer closeAll(ctrls)
+	for _, c := range ctrls {
+		for ch := 0; ch < c.FanChannels(); ch++ {
+			if err := c.SetFanPercent(ch, pct); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
 func cmdColor(args []string) error {
 	if len(args) < 2 {
 		return fmt.Errorf("usage: lianctl color <ch> <#RRGGBB> [brightness]")
@@ -161,6 +256,77 @@ func cmdColor(args []string) error {
 	return forEach(ctrls, ch, false, func(c device.Controller) error {
 		return c.SetChannelColors(ch, colors, bri)
 	})
+}
+
+// cmdRGB is the simple all-channels power switch: `rgb off` blanks everything,
+// `rgb on [#RRGGBB] [bri]` lights every channel a solid color (default white).
+func cmdRGB(args []string) error {
+	if len(args) < 1 {
+		return fmt.Errorf("usage: lianctl rgb <off|on> [#RRGGBB] [brightness]")
+	}
+	switch strings.ToLower(args[0]) {
+	case "off":
+		if len(args) != 1 {
+			return fmt.Errorf("usage: lianctl rgb off")
+		}
+		return setAllRGB(false, device.Color{}, 0)
+	case "on":
+		col := device.Color{R: 0xff, G: 0xff, B: 0xff}
+		if len(args) >= 2 {
+			c, err := device.ParseHexColor(args[1])
+			if err != nil {
+				return err
+			}
+			col = c
+		}
+		bri := 100.0
+		if len(args) >= 3 {
+			var err error
+			if bri, err = strconv.ParseFloat(args[2], 64); err != nil {
+				return fmt.Errorf("bad brightness %q", args[2])
+			}
+		}
+		return setAllRGB(true, col, bri)
+	default:
+		return fmt.Errorf("usage: lianctl rgb <off|on> [#RRGGBB] [brightness]")
+	}
+}
+
+// setAllRGB applies a single color (or off) to every RGB channel on every
+// controller. Per-LED writes only take effect with motherboard sync disabled,
+// so we always clear sync first — that alone is what turns off models that
+// don't support per-LED control.
+func setAllRGB(on bool, col device.Color, bri float64) error {
+	ctrls, err := openAll()
+	if err != nil {
+		return err
+	}
+	defer closeAll(ctrls)
+
+	colors := fillColor(col, 96)
+	for _, c := range ctrls {
+		if err := c.SetMotherboardSync(false); err != nil {
+			return err
+		}
+		for ch := 0; ch < c.RGBChannels(); ch++ {
+			err := c.SetChannelColors(ch, colors, bri)
+			if errors.Is(err, device.ErrUnsupported) {
+				// Sync-only model: no per-LED control. `off` is already done
+				// (sync cleared above); for `on`, re-enable sync so the ARGB
+				// header drives the LEDs again.
+				if on {
+					if err := c.SetMotherboardSync(true); err != nil {
+						return err
+					}
+				}
+				break
+			}
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 func cmdEffect(args []string) error {
